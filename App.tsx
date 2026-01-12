@@ -10,56 +10,70 @@ import { DayData } from './types';
 const RAMADAN_START_2026 = new Date('2026-02-18T00:00:00');
 
 const App: React.FC = () => {
-  const [locationName] = useState<string>("Makkah (Default)");
+  const [locationName, setLocationName] = useState<string>("Detecting location...");
   const [calendarData, setCalendarData] = useState<DayData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedRamadanDay, setSelectedRamadanDay] = useState<number>(1);
 
   // Default coordinates for Makkah
   const DEFAULT_LAT = 21.4225;
   const DEFAULT_LNG = 39.8262;
 
-  useEffect(() => {
-    const fetchCalendar = async (lat: number, lng: number) => {
-      setLoading(true);
-      try {
-        // Fetching for February 2026
-        const response = await fetch(
-          `https://api.aladhan.com/v1/calendar/2026/2?latitude=${lat}&longitude=${lng}&method=4`
+  const fetchCalendar = async (lat: number, lng: number, isDefault = false) => {
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `https://api.aladhan.com/v1/calendar/2026/2?latitude=${lat}&longitude=${lng}&method=4`
+      );
+      const data = await response.json();
+      
+      if (data.status === 'OK') {
+        const febData = data.data;
+        const responseMarch = await fetch(
+          `https://api.aladhan.com/v1/calendar/2026/3?latitude=${lat}&longitude=${lng}&method=4`
         );
-        const data = await response.json();
+        const dataMarch = await responseMarch.json();
         
-        if (data.status === 'OK') {
-          const febData = data.data;
-          // Fetching for March 2026
-          const responseMarch = await fetch(
-            `https://api.aladhan.com/v1/calendar/2026/3?latitude=${lat}&longitude=${lng}&method=4`
+        if (dataMarch.status === 'OK') {
+          const fullYearData = [...febData, ...dataMarch.data];
+          const ramadanDays = fullYearData.filter(
+            (day: any) => day.date.hijri.month.number === 9
           );
-          const dataMarch = await responseMarch.json();
+          setCalendarData(ramadanDays);
+          setLocationName(isDefault ? "Makkah (Default)" : "Current Location");
           
-          if (dataMarch.status === 'OK') {
-            const fullYearData = [...febData, ...dataMarch.data];
-            // Filter only Ramadan 1447 dates (Hijri month 9)
-            const ramadanDays = fullYearData.filter(
-              (day: any) => day.date.hijri.month.number === 9
-            );
-            setCalendarData(ramadanDays);
-          } else {
-            throw new Error("Failed to fetch March timings");
+          // Determine current Ramadan day for default view
+          const today = new Date();
+          const currentDayMatch = ramadanDays.find(d => 
+            new Date(d.date.readable).toDateString() === today.toDateString()
+          );
+          if (currentDayMatch) {
+            setSelectedRamadanDay(parseInt(currentDayMatch.date.hijri.day));
           }
-        } else {
-          throw new Error("Failed to fetch February timings");
         }
-      } catch (err) {
-        console.error(err);
-        setError("Error fetching prayer times. Please refresh the page.");
-      } finally {
-        setLoading(false);
       }
-    };
+    } catch (err) {
+      setError("Error fetching prayer times.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    // Load calendar immediately using default location
-    fetchCalendar(DEFAULT_LAT, DEFAULT_LNG);
+  useEffect(() => {
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          fetchCalendar(position.coords.latitude, position.coords.longitude);
+        },
+        () => {
+          fetchCalendar(DEFAULT_LAT, DEFAULT_LNG, true);
+        },
+        { timeout: 10000 }
+      );
+    } else {
+      fetchCalendar(DEFAULT_LAT, DEFAULT_LNG, true);
+    }
   }, []);
 
   return (
@@ -95,12 +109,16 @@ const App: React.FC = () => {
                 {error}
               </div>
             ) : (
-              <Calendar data={calendarData} />
+              <Calendar 
+                data={calendarData} 
+                onDayClick={(day) => setSelectedRamadanDay(day)}
+                selectedDay={selectedRamadanDay}
+              />
             )}
           </section>
 
           <section id="duas" className="scroll-mt-6">
-            <DuasSection />
+            <DuasSection selectedDay={selectedRamadanDay} />
           </section>
         </main>
 

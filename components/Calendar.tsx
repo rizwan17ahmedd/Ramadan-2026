@@ -4,14 +4,16 @@ import { DayData } from '../types';
 
 interface Props {
   data: DayData[];
+  onDayClick: (day: number) => void;
+  selectedDay: number;
 }
 
-const Calendar: React.FC<Props> = ({ data }) => {
+const Calendar: React.FC<Props> = ({ data, onDayClick, selectedDay }) => {
   const cleanTime = (time: string) => time.split(' ')[0];
 
   return (
     <div className="w-full">
-      {/* Desktop Table View (Hidden on Mobile) */}
+      {/* Desktop Table View */}
       <div className="hidden md:block overflow-x-auto rounded-2xl border border-emerald-700/50 shadow-2xl bg-emerald-950/20">
         <table className="w-full text-left border-collapse">
           <thead>
@@ -27,13 +29,18 @@ const Calendar: React.FC<Props> = ({ data }) => {
           </thead>
           <tbody className="divide-y divide-emerald-800/30">
             {data.map((day, idx) => {
+              const hijriDay = parseInt(day.date.hijri.day);
               const isToday = new Date().toDateString() === new Date(day.date.readable).toDateString();
+              const isSelected = selectedDay === hijriDay;
+
               return (
                 <tr 
                   key={idx} 
+                  onClick={() => onDayClick(hijriDay)}
                   className={`
-                    transition-colors hover:bg-emerald-800/20
-                    ${isToday ? 'bg-emerald-700/40 border-l-4 border-l-yellow-400' : ''}
+                    transition-all cursor-pointer hover:bg-emerald-800/20
+                    ${isSelected ? 'bg-emerald-700/40 border-l-4 border-l-yellow-400 shadow-inner' : ''}
+                    ${isToday && !isSelected ? 'border-l-4 border-l-emerald-500/50' : ''}
                   `}
                 >
                   <td className="px-4 py-4 font-amiri text-lg font-bold text-center">
@@ -64,24 +71,28 @@ const Calendar: React.FC<Props> = ({ data }) => {
         </table>
       </div>
 
-      {/* Mobile Card List View (Visible only on Mobile) */}
+      {/* Mobile Card List View */}
       <div className="grid grid-cols-1 gap-3 md:hidden">
         {data.map((day, idx) => {
+          const hijriDay = parseInt(day.date.hijri.day);
           const isToday = new Date().toDateString() === new Date(day.date.readable).toDateString();
+          const isSelected = selectedDay === hijriDay;
+
           return (
             <div 
               key={idx} 
+              onClick={() => onDayClick(hijriDay)}
               className={`
-                p-4 rounded-xl border transition-all active:scale-[0.98]
-                ${isToday 
-                  ? 'bg-emerald-800/60 border-yellow-400 shadow-lg shadow-yellow-900/20' 
+                p-4 rounded-xl border transition-all active:scale-[0.98] cursor-pointer
+                ${isSelected 
+                  ? 'bg-emerald-800/80 border-yellow-400 shadow-lg shadow-yellow-900/30 ring-1 ring-yellow-400/20' 
                   : 'bg-emerald-900/30 border-emerald-700/50'
                 }
               `}
             >
               <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="bg-emerald-800 rounded-lg w-10 h-10 flex items-center justify-center font-amiri text-xl font-bold border border-emerald-600/50">
+                  <div className={`rounded-lg w-10 h-10 flex items-center justify-center font-amiri text-xl font-bold border transition-colors ${isSelected ? 'bg-yellow-400 text-emerald-900 border-yellow-500' : 'bg-emerald-800 text-white border-emerald-600/50'}`}>
                     {day.date.hijri.day}
                   </div>
                   <div>
@@ -89,7 +100,7 @@ const Calendar: React.FC<Props> = ({ data }) => {
                     <div className="text-[10px] text-emerald-300 uppercase opacity-60">Ramadan 1447</div>
                   </div>
                 </div>
-                {isToday && <span className="text-[10px] bg-yellow-400 text-emerald-900 px-2 py-0.5 rounded-full font-bold uppercase">Today</span>}
+                {isToday && <span className="text-[10px] bg-emerald-500 text-white px-2 py-0.5 rounded-full font-bold uppercase">Today</span>}
               </div>
               
               <div className="grid grid-cols-5 gap-1.5">
