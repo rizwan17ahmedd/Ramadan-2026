@@ -10,34 +10,20 @@ import { DayData } from './types';
 const RAMADAN_START_2026 = new Date('2026-02-18T00:00:00');
 
 const App: React.FC = () => {
-  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationName] = useState<string>("Makkah (Default)");
   const [calendarData, setCalendarData] = useState<DayData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchLocationAndData = async () => {
-      try {
-        navigator.geolocation.getCurrentPosition(
-          async (position) => {
-            const { latitude, longitude } = position.coords;
-            setLocation({ lat: latitude, lng: longitude });
-            await fetchCalendar(latitude, longitude);
-          },
-          async () => {
-            setLocation({ lat: 21.4225, lng: 39.8262 });
-            await fetchCalendar(21.4225, 39.8262);
-          }
-        );
-      } catch (err) {
-        setError("Failed to initialize. Please check your connection.");
-        setLoading(false);
-      }
-    };
+  // Default coordinates for Makkah
+  const DEFAULT_LAT = 21.4225;
+  const DEFAULT_LNG = 39.8262;
 
+  useEffect(() => {
     const fetchCalendar = async (lat: number, lng: number) => {
       setLoading(true);
       try {
+        // Fetching for February 2026
         const response = await fetch(
           `https://api.aladhan.com/v1/calendar/2026/2?latitude=${lat}&longitude=${lng}&method=4`
         );
@@ -45,6 +31,7 @@ const App: React.FC = () => {
         
         if (data.status === 'OK') {
           const febData = data.data;
+          // Fetching for March 2026
           const responseMarch = await fetch(
             `https://api.aladhan.com/v1/calendar/2026/3?latitude=${lat}&longitude=${lng}&method=4`
           );
@@ -52,20 +39,27 @@ const App: React.FC = () => {
           
           if (dataMarch.status === 'OK') {
             const fullYearData = [...febData, ...dataMarch.data];
+            // Filter only Ramadan 1447 dates (Hijri month 9)
             const ramadanDays = fullYearData.filter(
               (day: any) => day.date.hijri.month.number === 9
             );
             setCalendarData(ramadanDays);
+          } else {
+            throw new Error("Failed to fetch March timings");
           }
+        } else {
+          throw new Error("Failed to fetch February timings");
         }
       } catch (err) {
-        setError("Error fetching prayer times.");
+        console.error(err);
+        setError("Error fetching prayer times. Please refresh the page.");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchLocationAndData();
+    // Load calendar immediately using default location
+    fetchCalendar(DEFAULT_LAT, DEFAULT_LNG);
   }, []);
 
   return (
@@ -87,7 +81,7 @@ const App: React.FC = () => {
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                 </svg>
-                {location ? `${location.lat.toFixed(2)}, ${location.lng.toFixed(2)}` : 'Makkah'}
+                {locationName}
               </div>
             </div>
 

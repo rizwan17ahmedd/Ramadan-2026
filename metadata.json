@@ -1,7 +1,5 @@
 {
-  "name": "Ramadan 2026 ",
-  "description": "A beautiful 30-day Ramadan calendar for 2026 with a countdown, prayer times, and AI-powered daily reflections.",
-  "requestFramePermissions": [
-    "geolocation"
-  ]
+  "name": "Ramadan 2026",
+  "description": "A beautiful 30-day Ramadan calendar for 2026 with a countdown, prayer times, and daily reflections.",
+  "requestFramePermissions": []
 }
